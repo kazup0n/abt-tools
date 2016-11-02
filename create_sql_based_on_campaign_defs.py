@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 import luigi
 import mysql.connector
+import logging
 from jinja2 import Environment, FileSystemLoader
 
 import settings
+
+logger = logging.getLogger('luigi-interface')
 
 class CampaignNotFoundException(Exception):
     pass
@@ -61,6 +64,7 @@ class CreateSQLForCampaignTask(luigi.Task):
     db = luigi.Parameter(settings.database)
     template_dir = luigi.Parameter(settings.template_dir)
     template_name = luigi.Parameter(settings.template_name)
+    print_sql = luigi.BooleanParameter(False)
 
     def run(self):
         # find campaign
@@ -72,7 +76,12 @@ class CreateSQLForCampaignTask(luigi.Task):
         # create sql file from template with campaign
         outfile = luigi.LocalTarget('sql/{campaign_name}'.format(campaign_name=self.campaign_name))
         with outfile.open('w') as file:
-            file.write(SQLFileTemplate(self.template_dir, self.template_name).compile(params))
+            compiled = SQLFileTemplate(self.template_dir, self.template_name).compile(params)
+            file.write(compiled)
+            if self.print_sql:
+                logger.info('**********************************************************************')
+                logger.info(compiled)
+                logger.info('**********************************************************************')
 
 if __name__ == '__main__':
     luigi.run()
